@@ -1,22 +1,25 @@
-import * as Vue from 'vue'
-import { h, createSSRApp, renderSlot } from 'vue'
-import { findRoute, getManifest, logGreen, normalizePath, getAsyncCssChunk, getAsyncJsChunk, getUserScriptVue, remInitial } from 'ssr-server-utils'
-import { setStore } from 'ssr-common-utils'
+import { h, createSSRApp, renderSlot, VNode } from 'vue'
+import {
+  findRoute, getManifest, logGreen, normalizePath, getAsyncCssChunk, getAsyncJsChunk,
+  getUserScriptVue, remInitial, setStore, setPinia, setApp
+} from 'ssr-common-utils'
 import { ISSRContext, IConfig } from 'ssr-types'
 import { createPinia } from 'pinia'
 import { serialize } from 'ssr-serialize-javascript'
+import { renderToNodeStream, renderToString } from '@vue/server-renderer'
 import { Routes } from './combine-router'
 import { createRouter, createStore } from './create'
-import { IFeRouteItem, RoutesType } from '../types'
+import { IFeRouteItem } from '../types'
 
-const { FeRoutes, App, layoutFetch, Layout } = Routes as RoutesType
+const { FeRoutes, App, layoutFetch, Layout } = Routes
 
 const serverRender = async (ctx: ISSRContext, config: IConfig) => {
-  const { mode, customeHeadScript, customeFooterScript, parallelFetch, prefix, isVite, isDev, clientPrefix } = config
+  const { mode, customeHeadScript, customeFooterScript, parallelFetch, prefix, isVite, isDev, clientPrefix, stream } = config
   const store = createStore()
   const router = createRouter()
   const pinia = createPinia()
   setStore(store)
+  setPinia(pinia)
   const [path, url] = [normalizePath(ctx.request.path, prefix), normalizePath(ctx.request.url, prefix)]
   const routeItem = findRoute<IFeRouteItem>(FeRoutes, path)
 
@@ -28,12 +31,10 @@ const serverRender = async (ctx: ISSRContext, config: IConfig) => {
   }
 
   const { fetch, webpackChunkName } = routeItem
-  const dynamicCssOrder = await getAsyncCssChunk(ctx, webpackChunkName)
-  const dynamicJsOrder = await getAsyncJsChunk(ctx)
+  const dynamicCssOrder = await getAsyncCssChunk(ctx, webpackChunkName, config)
+  const dynamicJsOrder = await getAsyncJsChunk(ctx, webpackChunkName, config)
   const manifest = await getManifest(config)
   const isCsr = !!(mode === 'csr' || ctx.request.query?.csr)
-  const customeHeadScriptArr: Vue.VNode[] = getUserScriptVue(customeHeadScript, ctx, h, 'vue3')
-  const customeFooterScriptArr: Vue.VNode[] = getUserScriptVue(customeFooterScript, ctx, h, 'vue3')
 
   const cssInject = ((isVite && isDev) ? [h('script', {
     type: 'module',
@@ -50,19 +51,22 @@ const serverRender = async (ctx: ISSRContext, config: IConfig) => {
   const jsInject = (isVite && isDev) ? [h('script', {
     type: 'module',
     src: '/node_modules/ssr-plugin-vue3/esm/entry/client-entry.js'
-  })] : dynamicJsOrder.filter(Boolean).map(js =>
+  })] : dynamicJsOrder.map(js => manifest[js]).filter(Boolean).map(js =>
     h('script', {
-      src: manifest[js],
-      type: isVite ? 'module' : ''
+      src: js,
+      type: isVite ? 'module' : 'text/javascript'
     })
   )
 
   const app = createSSRApp({
     render: function () {
+      const commonInject = `window.__USE_VITE__=${isVite}; window.prefix="${prefix}";${clientPrefix ? `window.clientPrefix="${clientPrefix}"` : ''}`
       const initialData = !isCsr ? h('script', {
-        innerHTML: `window.__USE_SSR__=true; window.__INITIAL_DATA__ = ${serialize(state)};window.__INITIAL_PINIA_DATA__ = ${serialize(pinia.state.value)};window.__USE_VITE__=${isVite}; window.prefix="${prefix}" ;${clientPrefix ? `window.clientPrefix="${clientPrefix}";` : ''}`
-      }) : h('script', { innerHTML: `window.__USE_VITE__=${isVite}; window.prefix="${prefix}"` })
+        innerHTML: `window.__USE_SSR__=true; window.__INITIAL_DATA__ = ${serialize(state)};window.__INITIAL_PINIA_DATA__ = ${serialize(pinia.state.value)};${commonInject}`
+      }) : h('script', { innerHTML: commonInject })
       const children = h(App, { ctx, config, asyncData, fetchData: combineAysncData, reactiveFetchData: { value: combineAysncData }, ssrApp: app })
+      const customeHeadScriptArr: VNode[] = getUserScriptVue(customeHeadScript, ctx, h, 'vue3')
+      const customeFooterScriptArr: VNode[] = getUserScriptVue(customeFooterScript, ctx, h, 'vue3')
 
       return h(Layout,
         { ctx, config, asyncData, fetchData: layoutFetchData, reactiveFetchData: { value: layoutFetchData } },
@@ -102,24 +106,18 @@ const serverRender = async (ctx: ISSRContext, config: IConfig) => {
   app.use(router)
   app.use(store)
   app.use(pinia)
+  setApp(app)
 
-  let layoutFetchData = {}
-  let fetchData = {}
+  let [layoutFetchData, fetchData] = [{}, {}]
 
   if (!isCsr) {
     router.push(url)
     await router.isReady()
     const currentFetch = fetch ? (await fetch()).default : null
-    // don't need getData when csr
-    if (parallelFetch) {
-      [layoutFetchData, fetchData] = await Promise.all([
-        layoutFetch ? layoutFetch({ store, router: router.currentRoute.value, ctx, pinia }, ctx) : Promise.resolve({}),
-        currentFetch ? currentFetch({ store, router: router.currentRoute.value, ctx, pinia }, ctx) : Promise.resolve({})
-      ])
-    } else {
-      layoutFetchData = layoutFetch ? await layoutFetch({ store, router: router.currentRoute.value, ctx, pinia }, ctx) : {}
-      fetchData = currentFetch ? await currentFetch({ store, router: router.currentRoute.value, ctx, pinia }, ctx) : {}
-    }
+    const { value } = router.currentRoute
+    const lF = layoutFetch ? layoutFetch({ store, router: value, ctx, pinia }, ctx) : Promise.resolve({})
+    const CF = currentFetch ? currentFetch({ store, router: value, ctx, pinia }, ctx) : Promise.resolve({});
+    [layoutFetchData, fetchData] = parallelFetch ? await Promise.all([lF, CF]) : [await lF, await CF]
   } else {
     logGreen(`Current path ${path} use csr render mode`)
   }
@@ -130,8 +128,18 @@ const serverRender = async (ctx: ISSRContext, config: IConfig) => {
   }
 
   const state = Object.assign({}, store.state ?? {}, asyncData.value)
-
-  return app
+  if (stream) {
+    return renderToNodeStream(app)
+  } else {
+    const teleportsContext: {
+      teleports?: Record<string, string>
+    } = {}
+    const html = await renderToString(app, teleportsContext)
+    return {
+      html,
+      teleportsContext
+    }
+  }
 }
 
 export {

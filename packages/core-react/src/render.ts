@@ -1,12 +1,13 @@
 import { resolve } from 'path'
 import { Readable } from 'stream'
 import { renderToString, renderToNodeStream } from 'react-dom/server'
-import { loadConfig, getCwd, StringToStream, mergeStream2 } from 'ssr-server-utils'
-import { ISSRContext, UserConfig, ExpressContext, IConfig } from 'ssr-types'
+import { loadConfig, getCwd, StringToStream, mergeStream2, judgeServerFramework } from 'ssr-common-utils'
+import { ISSRContext, UserConfig, ISSRNestContext, IConfig } from 'ssr-types'
 import type { ViteDevServer } from 'vite'
 
 const cwd = getCwd()
 const defaultConfig = loadConfig()
+const serverFrameWork = judgeServerFramework()
 
 function render (ctx: ISSRContext, options?: UserConfig & {stream: true}): Promise<Readable>
 function render (ctx: ISSRContext, options?: UserConfig & {stream: false}): Promise<string>
@@ -17,10 +18,10 @@ async function render (ctx: ISSRContext, options?: UserConfig) {
   const config = Object.assign({}, defaultConfig, options ?? {})
   const { stream, isVite } = config
 
-  if (!ctx.response.type && typeof ctx.response.type !== 'function') {
+  if (serverFrameWork === 'ssr-plugin-midway') {
     ctx.response.type = 'text/html;charset=utf-8'
-  } else if (!(ctx as ExpressContext).response.hasHeader?.('content-type')) {
-    (ctx as ExpressContext).response.setHeader?.('Content-type', 'text/html;charset=utf-8')
+  } else if (serverFrameWork === 'ssr-plugin-nestjs') {
+    (ctx as ISSRNestContext).response.setHeader('Content-type', 'text/html;charset=utf-8')
   }
 
   const serverRes = isVite ? await viteRender(ctx, config) : await commonRender(ctx, config)

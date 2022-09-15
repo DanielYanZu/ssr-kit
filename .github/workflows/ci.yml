@@ -26,12 +26,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-              node_modules/.pnpm
               ~/.pnpm-store
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
               .eslintcache
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -68,10 +69,10 @@ jobs:
 
   e2e-chrome-midway-react:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -83,22 +84,25 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              /Users/runner/.cache
+              /Users/runner/Library/Caches/Cypress
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -109,6 +113,8 @@ jobs:
           pnpm build
 
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:midway:react
@@ -120,10 +126,10 @@ jobs:
 
   e2e-chrome-nestjs-react-prod:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -135,22 +141,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -160,6 +167,7 @@ jobs:
         run: |
           pnpm build
           
+      
       - uses: cypress-io/github-action@v2
         with:
           install: false
@@ -172,10 +180,10 @@ jobs:
 
   e2e-chrome-nestjs-react-prod-vite:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -187,22 +195,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
           
       - name: Install dependencies
@@ -210,9 +219,12 @@ jobs:
           pnpm i --no-frozen-lockfile
       - name: Build packages
         run: |
-          pnpm build
+            pnpm build
 
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: C:\Users\runneradmin\AppData\Local\Cypress\Cache
         with:
           install: false
           start: pnpm example:nestjs:react:prod:vite
@@ -223,10 +235,10 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-vue3-prod-vite:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -238,22 +250,24 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
+              C:\Users\runneradmin\.cache
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -261,7 +275,10 @@ jobs:
       - name: Build packages
         run: |
           pnpm build
+
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: C:\Users\runneradmin\AppData\Local\Cypress\Cache
         with:
           install: false
           start: pnpm example:nestjs:vue3:prod:vite
@@ -272,10 +289,10 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-vue-prod:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -287,22 +304,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -310,7 +328,10 @@ jobs:
       - name: Build packages
         run: |
           pnpm build
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: C:\Users\runneradmin\AppData\Local\Cypress\Cache
         with:
           install: false
           start: pnpm example:nestjs:vue:prod
@@ -321,10 +342,10 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-vue3-prod:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -336,22 +357,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -360,6 +382,7 @@ jobs:
         run: |
           pnpm build
         
+      
       - uses: cypress-io/github-action@v2
         with:
           install: false
@@ -371,10 +394,10 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-vue3-prod-optimize:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -386,22 +409,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -410,7 +434,10 @@ jobs:
         run: |
           pnpm build
         
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: C:\Users\runneradmin\AppData\Local\Cypress\Cache
         with:
           install: false
           start: pnpm example:nestjs:vue3:prod:optimize
@@ -421,10 +448,10 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-react-prod-optimize:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -436,22 +463,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -460,7 +488,10 @@ jobs:
         run: |
           pnpm build
         
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: C:\Users\runneradmin\AppData\Local\Cypress\Cache
         with:
           install: false
           start: pnpm example:nestjs:react:prod:optimize
@@ -471,10 +502,10 @@ jobs:
           browser: chrome
   e2e-chrome-midway-react-vite:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -486,22 +517,24 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              /Users/runner/Library/Caches/Cypress
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -510,7 +543,10 @@ jobs:
         run: |
           pnpm build
         
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:midway:react:vite
@@ -520,10 +556,10 @@ jobs:
           browser: chrome
   e2e-chrome-midway-vue3-vite:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -535,22 +571,24 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              /Users/runner/Library/Caches/Cypress
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -559,7 +597,10 @@ jobs:
         run: |
           pnpm build
         
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:midway:vue3:vite
@@ -570,10 +611,10 @@ jobs:
           
   e2e-chrome-midway-react-dynamic-router:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -595,21 +636,20 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-              .turbo
-              node_modules/.cache/turbo
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              .turbo/turbo
+              /Users/runner/Library/Caches/Cypress
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -619,6 +659,8 @@ jobs:
             pnpm build
         
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:midway:react:dynamic:router
@@ -630,45 +672,37 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-vue3-pinia:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
-      - name: Get remote e2e example
-        uses: actions/checkout@master
-        with:
-          repository: zhangyuang/nestjs-vue3-ssr-pinia
-          path: nestjs-vue3-ssr-pinia
-          ref: master
-        
-      - name: Mv e2e example
-        run: |
-          mv nestjs-vue3-ssr-pinia example
       - name: Turbo Cache
         id: turbo-cache
         uses: actions/cache@v3
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/.cache/Cypress
+              ~/.pnpm-store
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              /Users/runner/Library/Caches/Cypress
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -678,6 +712,8 @@ jobs:
            pnpm build
         
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:nestjs:vue3:pinia
@@ -689,10 +725,10 @@ jobs:
           
   e2e-chrome-midway-vue:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -704,22 +740,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              /Users/runner/Library/Caches/Cypress
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -727,8 +764,10 @@ jobs:
       - name: Build packages
         run: |
           pnpm build
-        
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:midway:vue
@@ -739,10 +778,10 @@ jobs:
           browser: chrome
   e2e-chrome-midway-vue3:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -754,22 +793,24 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              /Users/runner/Library/Caches/Cypress
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -779,6 +820,8 @@ jobs:
           pnpm build
         
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:midway:vue3
@@ -789,10 +832,10 @@ jobs:
           browser: chrome 
   e2e-chrome-nestjs-vue:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -804,22 +847,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -828,7 +872,10 @@ jobs:
         run: |
           pnpm build
         
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: C:\Users\runneradmin\AppData\Local\Cypress\Cache
         with:
           install: false
           start: pnpm example:nestjs:vue
@@ -839,10 +886,10 @@ jobs:
           browser: chrome
   e2e-chrome-nestjs-vue3:
     if: ${{ !contains(github.event.head_commit.message, 'skip ci') && !contains(github.event.head_commit.message, '.md')}}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -854,22 +901,23 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
@@ -877,8 +925,10 @@ jobs:
       - name: Build packages
         run: |
           pnpm build
-        
+      
       - uses: cypress-io/github-action@v2
+        # env:
+        #     CYPRESS_CACHE_FOLDER: /Users/runner/Library/Caches/Cypress
         with:
           install: false
           start: pnpm example:nestjs:vue3
@@ -911,7 +961,6 @@ jobs:
       - e2e-chrome-nestjs-vue3-prod-optimize
     strategy:
       matrix:
-        os: [macos-latest]
         node: ["12"]
     steps:
       - name: Checkout
@@ -923,29 +972,30 @@ jobs:
         with:
           path: |
               .turbo
-              node_modules/.cache/turbo
-              node_modules/.pnpm
+              ~/.cache/Cypress
               ~/.pnpm-store
-              /home/runner/.cache/Cypress
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+              ~/Library/pnpm/store
+              ~/AppData/Local/pnpm/store
+              
+          key: ${{ runner.os }}-v1.0.0-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-              ${{ runner.os }}-
+              ${{ runner.os }}-v1.0.0-
           
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
       - name: Install dependencies
         run: | 
           pnpm i --no-frozen-lockfile
       - name: Build packages
         run: |
-          pnpm build:publish
+          pnpm build
       - name: List packages
         run: ls -R packages
         shell: bash

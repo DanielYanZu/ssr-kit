@@ -1,7 +1,7 @@
 
 import { join } from 'path'
-import { Mode } from 'ssr-types-react'
-import { getCwd, loadConfig, getLocalNodeModules, setStyle, addImageChain, loadModuleFromFramework } from 'ssr-server-utils'
+import { Mode } from 'ssr-types'
+import { getCwd, loadConfig, setStyle, addImageChain, loadModuleFromFramework } from 'ssr-common-utils'
 import * as WebpackChain from 'webpack-chain'
 import * as webpack from 'webpack'
 
@@ -48,7 +48,7 @@ const addBabelLoader = (chain: WebpackChain.Rule<WebpackChain.Module>, envOption
 }
 const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
   const config = loadConfig()
-  const { moduleFileExtensions, useHash, isDev, chainBaseConfig, corejsOptions, babelExtraModule, alias, define } = config
+  const { moduleFileExtensions, useHash, chainBaseConfig, corejsOptions, babelExtraModule, alias, define } = config
   const mode = process.env.NODE_ENV as Mode
   const envOptions = {
     modules: false,
@@ -62,9 +62,6 @@ const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
     .modules
     .add('node_modules')
     .add(join(getCwd(), './node_modules'))
-    .when(isDev, chain => {
-      chain.add(getLocalNodeModules())
-    })
     .end()
     .extensions.merge(moduleFileExtensions)
     .end()
@@ -132,8 +129,8 @@ const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
     })
 
   chain.plugin('minify-css').use(MiniCssExtractPlugin, [{
-    filename: useHash ? 'static/css/[name].[contenthash:8].css' : 'static/css/[name].css',
-    chunkFilename: useHash ? 'static/css/[name].[contenthash:8].chunk.css' : 'static/css/[name].chunk.css'
+    filename: useHash ? '[name].[contenthash:8].css' : 'static/[name].css',
+    chunkFilename: useHash ? '[name].[contenthash:8].chunk.css' : 'static/[name].chunk.css'
   }])
 
   chain.plugin('webpackBar').use(new WebpackBar({
@@ -141,6 +138,7 @@ const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
     color: isServer ? '#f173ac' : '#45b97c'
   }))
   chain.plugin('ssrDefine').use(webpack.DefinePlugin, [{
+    ...process.env,
     __isBrowser__: !isServer,
     ...(isServer ? define?.server : define?.client),
     ...define?.base

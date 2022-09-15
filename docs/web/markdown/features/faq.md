@@ -409,7 +409,7 @@ this.$router.options.scrollBehavior = (to, from, savedPosition) {
 }
 ```
 
-### Vue 获取 Vuex 实例
+### Vue 任意文件获取 Vuex 实例
 
 为了方便开发者在任意地方都能够使用 `Vuex` 实例，这里框架提供了 `useStore` api 可以在任意文件调用
 
@@ -418,6 +418,31 @@ import { useStore } from 'ssr-common-utils'
 
 const store = useStore()
 
+```
+
+### Vue3 任意文件获取 Pinia 实例
+
+在服务端渲染过程中，当我们在非 `setup` 环境调用 `Pinia` 时，其自身并不一定能够准确的判断出当前的实例。在高并发场景可能会导致数据混乱，所以针对这种情况，我们需要手动调用 `api` 时传入当前正确的 `Pinia Instance` ，为了方便开发者在任意地方都能够使用 `Pinia` 实例，这里框架提供了 `usePinia` api 可以在任意文件调用
+
+
+```js
+import { usePinia } from 'ssr-common-utils'
+
+const pinia = usePinia()
+
+const data = usePiniaStore(pinia) // 非 setup 上下文调用时需要手动传入实例
+
+```
+### Vue3 任意文件获取 App 实例
+
+为了方便开发者在任意地方都能够使用 `App` 实例，这里框架提供了 `useApp` api 可以在任意文件调用
+
+```js
+import { useApp } from 'ssr-common-utils'
+
+const app = useApp()
+
+app.use('Plugin')
 ```
 
 ### 使用Vue3国际化插件
@@ -541,7 +566,9 @@ export default {
 在 `Vite` 场景可直接使用以下 `UI` 框架按需引入语法。若发现问题请及时提 `issue`, 我们将会尽快修复
 
 - `React`: [antd](https://ant.design/)
-- `Vue`: [vant](https://vant-contrib.gitee.io/vant/#/), [ant-design-vue](https://antdv.com/docs/vue/introduce-cn/),[element-plus](https://element-plus.org/zh-CN/)
+- `Vue`: [vant](https://vant-contrib.gitee.io/vant/#/),[element-plus](https://element-plus.org/zh-CN/),[ant-design-vue](https://antdv.com/docs/vue/introduce-cn/)
+
+`注：(暂不推荐 Vue + ant-design-vue，似乎在 SSR 场景会出现样式闪烁问题, 待 antv 官方修复)`
 
 ```js
 // 注意: 使用了按需引入的框架无法再使用全量引入的语法
@@ -611,7 +638,7 @@ export { userConfig }
 
 ```js
 import type { UserConfig } from 'ssr-types'
-import { setStyle } from 'ssr-server-utils'
+import { setStyle } from 'ssr-common-utils'
 
 const userConfig: UserConfig = {
   chainBaseConfig: (chain, isServer) => {
@@ -661,7 +688,7 @@ $ yarn add sass sass-loader@^10.0.0 -D # 必须安装 ^10.0.0 版本的 sass-loa
 ```
 
 ```js
-import { setStyle } from 'ssr-server-utils'
+import { setStyle } from 'ssr-common-utils'
 import type { UserConfig } from 'ssr-types'
 
 const userConfig: UserConfig = {
@@ -758,7 +785,7 @@ module.exports = {
   disableClientRender: true,
   chainClientConfig: chain => {
     // 只需要修改入口文件路径，其他配置可以沿用默认配置
-    const { loadConfig, getOutputPublicPath } = require('ssr-server-utils')
+    const { loadConfig, getOutputPublicPath } = require('ssr-common-utils')
     const { chunkName, getOutput, useHash } = loadConfig()
     const publicPath = getOutputPublicPath()
     chain.entry(chunkName)
@@ -766,8 +793,8 @@ module.exports = {
       .end()
       .output
       .path(getOutput().clientOutPut)
-      .filename(useHash ? 'static/js/[name].[contenthash:8].js' : 'static/js/[name].js')
-      .chunkFilename(useHash ? 'static/js/[name].[contenthash:8].chunk.js' : 'static/js/[name].chunk.js')
+      .filename(useHash ? '[name].[contenthash:8].js' : '[name].js')
+      .chunkFilename(useHash ? '[name].[contenthash:8].chunk.js' : '[name].chunk.js')
       .publicPath(publicPath)
       .end()
   }
@@ -804,18 +831,11 @@ module.exports = {
        <title>
         {{ pathToTitle(ctx.request.path) }}
       </title>
-      <!-- 初始化移动端 rem 设置，如不需要可自行删除 -->
       <slot name="remInitial" />
-      <!-- 用于通过配置插入自定义的 script 为了避免影响期望功能这块内容不做 escape，为了避免 xss 需要保证插入脚本代码的安全性  -->
-      <slot name="customeHeadScript" />
-      <slot name="cssInject" />
+      <slot name="injectHeader" />
     </head>
-    <body>
-      <div id="app">
-        <slot name="children" />
-      </div>
-      <slot name="initialData" />
-      <slot name="jsInject" />
+   <body>
+      <slot name="content" />
     </body>
   </html>
 </template>
@@ -883,7 +903,9 @@ const Layout = (props: LayoutProps) => {
 
 不建议图片资源放在 `web` 文件夹，对图片资源若非有小文件 `base64` 内联或者 `hash` 缓存的需求是不建议用 `Webpack` 去处理的，这样会使得 `Webpack` 的构建速度变慢。
 
-建议放在默认的静态资源文件夹即 `build` 文件夹，即可通过 `<img src="/foo.jpg">` 即可引入。由于 [egg-static](https://github.com/eggjs/egg-static) 支持数组的形式，也可以自行在根目录下创建 `public` 文件夹用于存放图片等静态资源。但记住这里需要额外将 `public` 文件夹设置为[静态资源文件夹](https://github.com/zhangyuang/ssr/blob/dev/example/midway-vue3-ssr/src/config/config.default.ts#L15)
+建议放在默认的静态资源文件夹即 `build|public` 文件夹，即可通过 `<img src="/foo.jpg">` 即可引入。或者使用单独的 `CDN` 图片服务(推荐)
+
+`注：针对绝对路径开头的图片地址框架底层将不会使用 css-loader 等 loader 进行处理，故若有图片资源的 publicPath 需求请自行通过 webpack-chain 添加额外规则处理`
 
 ### 如何让某个组件只在客户端渲染
 
@@ -1187,6 +1209,42 @@ $ ssr start --port 7001 # 等价于 midway-bin dev --port 7001
 
 ## 其他问题
 
+### 动态路由切换组件不重新渲染
+
+针对动态路由例如 `/user/:id` 之类的 `path`, 一些前端框架为了性能考虑，在路由跳转时将会复用组件实例造成组件不重新渲染的现象。
+
+例如在本框架中从 `/user/1` 跳转到 `/user/2` 时，`fetch` 方法被调用但组件并没有更新。解决方案有很多种，下面列出一些方案，根据实际情况选择
+
+#### Vue 场景
+
+通过添加 `router-view` 组件的 `key` 属性来防止组件被缓存
+
+```js
+// layout/App.vue
+<router-view :key="$route.fullPath" />
+```
+
+或者抽象 `fetch` 方法中的逻辑在 `watch route` 改变时调用
+
+或者通过 `fetchData` 的方式。来通过 `props` 获取数据来触发重新渲染
+
+```js
+// fetch.ts
+export default async ({ store, router, ctx }: Params) => {
+  return {
+    data: Math.random()
+  }
+}
+// render.vue
+import { defineProps } from 'vue'
+
+const props = defineProps<{data: string}>()
+```
+
+#### React 场景
+
+`React` 场景使用 `context` 理论上不会出现此问题，若遇到类似问题, 请提 `issue`
+
 ### class IssueWebpackError 报错
 
 错误原因：`Webpack` 多版本冲突查询依赖逻辑错误
@@ -1198,7 +1256,7 @@ $ ssr start --port 7001 # 等价于 midway-bin dev --port 7001
 ```json
 {
   "scripts": {
-    "postinstall:": "node ./node_modules/server-utils/postinstall.js"
+    "postinstall:": "node ./node_modules/ssr-common-utils/postinstall.js"
   }
 }
 ```

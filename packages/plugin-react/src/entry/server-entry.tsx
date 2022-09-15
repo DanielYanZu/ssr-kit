@@ -1,18 +1,19 @@
 import * as React from 'react'
+import { createElement } from 'react'
 import { StaticRouter } from 'react-router-dom'
-import { findRoute, getManifest, logGreen, normalizePath, getAsyncCssChunk, getAsyncJsChunk, reactRefreshFragment } from 'ssr-server-utils'
-import { ISSRContext, IConfig, ReactRoutesType, ReactESMPreloadFeRouteItem, DynamicFC, StaticFC } from 'ssr-types-react'
+import { findRoute, getManifest, logGreen, normalizePath, getAsyncCssChunk, getAsyncJsChunk, reactRefreshFragment, setStoreContext } from 'ssr-common-utils'
+import { ISSRContext, IConfig, ReactESMPreloadFeRouteItem, DynamicFC, StaticFC } from 'ssr-types'
 import { serialize } from 'ssr-serialize-javascript'
-// @ts-expect-error
 import { STORE_CONTEXT as Context } from '_build/create-context'
 import { Routes } from './create-router'
 
-const { FeRoutes, layoutFetch, state, Layout } = Routes as ReactRoutesType
+const { FeRoutes, layoutFetch, state, Layout } = Routes
 
-const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<React.ReactElement> => {
+const serverRender = async (ctx: ISSRContext, config: IConfig) => {
   const { mode, parallelFetch, prefix, isVite, isDev, clientPrefix } = config
   const path = normalizePath(ctx.request.path, prefix)
   const routeItem = findRoute<ReactESMPreloadFeRouteItem>(FeRoutes, path)
+  setStoreContext(Context)
 
   if (!routeItem) {
     throw new Error(`
@@ -22,8 +23,8 @@ const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<React.Re
   }
 
   const { fetch, webpackChunkName, component } = routeItem
-  const dynamicCssOrder = await getAsyncCssChunk(ctx, webpackChunkName)
-  const dynamicJsOrder = await getAsyncJsChunk(ctx)
+  const dynamicCssOrder = await getAsyncCssChunk(ctx, webpackChunkName, config)
+  const dynamicJsOrder = await getAsyncJsChunk(ctx, webpackChunkName, config)
   const manifest = await getManifest(config)
 
   const injectCss = ((isVite && isDev) ? [
@@ -41,7 +42,7 @@ const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<React.Re
       __html: 'window.__USE_VITE__=true'
     }} />] : []),
     ...((isVite && isDev) ? [<script type="module" src='/node_modules/ssr-plugin-react/esm/entry/client-entry.js' key="vite-react-entry" />] : []),
-    ...dynamicJsOrder.map(js => manifest[js]).filter(Boolean).map(item => <script key={item} src={item} type={isVite ? 'module' : ''}/>)
+    ...dynamicJsOrder.map(js => manifest[js]).filter(Boolean).map(item => <script key={item} src={item} type={isVite ? 'module' : 'text/javascript'}/>)
   ]
   const staticList = {
     injectCss,
@@ -54,35 +55,34 @@ const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<React.Re
   if (isCsr) {
     logGreen(`Current path ${path} use csr render mode`)
   }
-  let layoutFetchData = {}
-  let fetchData = {}
+
+  let [layoutFetchData, fetchData] = [{}, {}]
+
   if (!isCsr) {
     const currentFetch = fetch ? (await fetch()).default : null
-
-    // csr 下不需要服务端获取数据
-    if (parallelFetch) {
-      [layoutFetchData, fetchData] = await Promise.all([
-        layoutFetch ? layoutFetch({ ctx }) : Promise.resolve({}),
-        currentFetch ? currentFetch({ ctx }) : Promise.resolve({})
-      ])
-    } else {
-      layoutFetchData = layoutFetch ? await layoutFetch({ ctx }) : {}
-      fetchData = currentFetch ? await currentFetch({ ctx }) : {}
-    }
+    const lF = layoutFetch ? layoutFetch({ ctx }) : Promise.resolve({})
+    const CF = currentFetch ? currentFetch({ ctx }) : Promise.resolve({});
+    [layoutFetchData, fetchData] = parallelFetch ? await Promise.all([lF, CF]) : [await lF, await CF]
   }
+
   const combineData = isCsr ? null : Object.assign(state ?? {}, layoutFetchData ?? {}, fetchData ?? {})
-  const injectState = isCsr ? <script dangerouslySetInnerHTML={{ __html: `window.prefix="${prefix}"` }} /> : <script dangerouslySetInnerHTML={{
+  const injectState = isCsr ? <script dangerouslySetInnerHTML={{ __html: `window.prefix="${prefix}";${clientPrefix ? `window.clientPrefix="${clientPrefix}";` : ''}` }} /> : <script dangerouslySetInnerHTML={{
     __html: `window.__USE_SSR__=true; window.__INITIAL_DATA__ =${serialize(combineData)}; window.prefix="${prefix}";${clientPrefix ? `window.clientPrefix="${clientPrefix}";` : ''}`
   }} />
-  return (
-    <StaticRouter location={ctx.request.url} basename={prefix === '/' ? undefined : prefix}>
-      <Context.Provider value={{ state: combineData }}>
-        <Layout ctx={ctx} config={config} staticList={staticList} injectState={injectState}>
-          <Component />
-        </Layout>
-      </Context.Provider>
-    </StaticRouter>
-  )
+  // with jsx type error, use createElement here
+  return createElement(StaticRouter, {
+    location: ctx.request.url,
+    basename: prefix === '/' ? undefined : prefix
+  }, createElement(Context.Provider, {
+    value: {
+      state: combineData
+    }
+  }, createElement(Layout, {
+    ctx: ctx,
+    config: config,
+    staticList: staticList,
+    injectState: injectState
+  }, createElement(Component, null))))
 }
 
 export {

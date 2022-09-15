@@ -12,18 +12,22 @@ export type IFeRouteItem = ESMFeRouteItem<{
   fetch?: ESMFetch
 }>
 
-export interface ParamsNest<T=any, U=any> {
+export interface ParamsNest<T={}, U={}> {
   store: Store<T>
   router: Route
   ctx?: ISSRNestContext<U>
 }
 
-export interface ParamsKoa<T=any, U=any> {
+export interface ParamsKoa<T={}, U={}> {
   store: Store<T>
   router: Route
   ctx?: ISSRMidwayKoaContext<U>
 }
-export type Params = ParamsKoa | ParamsNest
+export interface Params<T={}, U={}> {
+  store: Store<T>
+  router: Route
+  ctx?: ISSRContext<U>
+}
 
 export interface RoutesType {
   Layout: Component

@@ -1,6 +1,6 @@
 {
   "name": "ssr-core-vue3",
-  "version": "6.2.13",
+  "version": "6.2.18",
   "description": "vue3 core for react/vue2/vue3 ssr deploy on serverless or tradtional web server",
   "main": "./cjs/index.js",
   "module": "./esm/index.js",
@@ -34,7 +34,7 @@
     "pinia": "^2.0.13",
     "ssr-serialize-javascript": "^6.0.0",
     "ssr-deepclone": "^1.0.0",
-    "ssr-server-utils": "^6.2.10",
+    "ssr-common-utils": "^6.2.10",
     "vue": "^3.0.0"
   },
   "devDependencies": {

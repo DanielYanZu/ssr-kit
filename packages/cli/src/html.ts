@@ -5,10 +5,10 @@ import { Argv } from 'ssr-types'
 
 export const generateHtml = async (argv: Argv) => {
   if (process.env.SPA) {
-    console.log('Generating html file...')
     // spa 模式下生成 html 文件直接部署
-    const { loadConfig, getCwd, judgeFramework, loadModuleFromFramework } = await import('ssr-server-utils')
-    const { jsOrder, cssOrder, customeHeadScript, customeFooterScript, hashRouter, htmlTemplate, prefix, clientPrefix, isVite } = loadConfig()
+    const { loadConfig, getCwd, judgeFramework, loadModuleFromFramework, logGreen } = await import('ssr-common-utils')
+    logGreen('Generating html file...')
+    const { jsOrder, customeHeadScript, customeFooterScript, hashRouter, htmlTemplate, prefix, clientPrefix, isVite } = loadConfig()
     const htmlStr = htmlTemplate ?? `
   <!DOCTYPE html>
   <html lang="en">
@@ -45,7 +45,7 @@ export const generateHtml = async (argv: Argv) => {
       }]
     combine[0].arr = combine[0].arr.concat([
       {
-        content: `window.__USE_SSR__=false;window.__USE_VITE__=${isVite}; window.prefix="${prefix}" ;${clientPrefix ? `window.clientPrefix="${clientPrefix};"` : ''}`
+        content: `window.__USE_SSR__=false;window.__USE_VITE__=${isVite}; window.prefix="${prefix}" ;${clientPrefix ? `window.clientPrefix="${clientPrefix}"` : ''}`
       }
     ])
 
@@ -69,7 +69,7 @@ export const generateHtml = async (argv: Argv) => {
     } if (framework === 'ssr-plugin-vue') {
       for (const item of combine) {
         const { arr, flag } = item
-        const scriptArr = arr.map((item) => `<script ${item.describe?.attrs ? `src="${item.describe.attrs.src}" type=text/javascript` : ''}>${item.content} </script>`)
+        const scriptArr = arr.map((item) => `<script ${isVite ? 'type="module"' : ''} ${item.describe?.attrs ? `src="${item.describe.attrs.src}" type=text/javascript` : ''}>${item.content} </script>`)
         if (flag === 'header') {
           jsHeaderManifest = scriptArr.join('')
         } else {
@@ -79,17 +79,17 @@ export const generateHtml = async (argv: Argv) => {
     }
 
     const cwd = getCwd()
-    const manifest = require(join(cwd, './build/client/asset-manifest.json'))
+    const manifest: Record<string, string> = require(join(cwd, './build/client/asset-manifest.json'))
     let jsManifest = ''
     jsOrder.forEach(item => {
       if (manifest[item]) {
-        jsManifest += `<script src="${manifest[item]}"></script>`
+        jsManifest += `<script src="${manifest[item]}" ${isVite ? 'type="module"' : ''}></script>`
       }
     })
     let cssManifest = ''
-    cssOrder.forEach(item => {
-      if (manifest[item]) {
-        cssManifest += `<link rel='stylesheet' href="${manifest[item]}" />`
+    Object.values(manifest).reverse().forEach(item => {
+      if (item.endsWith('chunk.css')) {
+        cssManifest += `<link rel='stylesheet' href="${item}" />`
       }
     })
     const generateHtmlStr = htmlStr.replace('cssInject', cssManifest).replace('jsManifest', jsManifest).replace('jsHeaderManifest', jsHeaderManifest)

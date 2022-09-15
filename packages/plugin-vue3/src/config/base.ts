@@ -1,7 +1,7 @@
 
 import { join } from 'path'
 import { Mode } from 'ssr-types'
-import { getCwd, loadConfig, getLocalNodeModules, setStyle, addImageChain, loadModuleFromFramework } from 'ssr-server-utils'
+import { getCwd, loadConfig, setStyle, addImageChain, loadModuleFromFramework } from 'ssr-common-utils'
 import * as webpack from 'webpack'
 import * as WebpackChain from 'webpack-chain'
 
@@ -65,7 +65,7 @@ const addBabelLoader = (chain: WebpackChain.Rule<WebpackChain.Module>, envOption
 
 const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
   const config = loadConfig()
-  const { moduleFileExtensions, useHash, isDev, chainBaseConfig, locale, corejsOptions, ssrVueLoaderOptions, csrVueLoaderOptions, babelExtraModule, alias, define } = config
+  const { moduleFileExtensions, useHash, chainBaseConfig, locale, corejsOptions, ssrVueLoaderOptions, csrVueLoaderOptions, babelExtraModule, alias, define } = config
 
   let vueLoaderOptions = {
     babelParserPlugins: ['jsx', 'classProperties', 'decorators-legacy'],
@@ -109,9 +109,6 @@ const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
     .modules
     .add('node_modules')
     .add(join(getCwd(), './node_modules'))
-    .when(isDev, chain => {
-      chain.add(getLocalNodeModules())
-    })
     .end()
     .extensions.merge(moduleFileExtensions)
     .end()
@@ -206,16 +203,16 @@ const getBaseConfig = (chain: WebpackChain, isServer: boolean) => {
     })
 
   chain.plugin('minify-css').use(MiniCssExtractPlugin, [{
-    filename: useHash ? 'static/css/[name].[contenthash:8].css' : 'static/css/[name].css',
-    chunkFilename: useHash ? 'static/css/[name].[contenthash:8].chunk.css' : 'static/css/[name].chunk.css'
+    filename: useHash ? '[name].[contenthash:8].css' : 'static/[name].css',
+    chunkFilename: useHash ? '[name].[contenthash:8].chunk.css' : 'static/[name].chunk.css'
   }])
 
   chain.plugin('webpackBar').use(new WebpackBar({
     name: isServer ? 'server' : 'client',
     color: isServer ? '#f173ac' : '#45b97c'
   }))
-
   chain.plugin('ssrDefine').use(webpack.DefinePlugin, [{
+    ...process.env,
     __isBrowser__: !isServer,
     __VUE_OPTIONS_API__: true,
     __VUE_PROD_DEVTOOLS__: false,

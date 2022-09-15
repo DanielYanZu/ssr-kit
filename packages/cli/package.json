@@ -1,6 +1,6 @@
 {
   "name": "ssr",
-  "version": "6.2.29",
+  "version": "6.2.35",
   "description": "cli for react/vue2/vue3 ssr deploy on serverless or tradtional web server",
   "main": "./cjs/index.js",
   "module": "./esm/index.js",
@@ -31,11 +31,12 @@
   },
   "homepage": "https://github.com/zhangyuang/ssr#readme",
   "dependencies": {
+    "axios": "^0.21.1",
     "chokidar": "^3.5.3",
-    "esbuild": "^0.13.14",
+    "esbuild": "0.14.48",
     "ora": "^4.0.4",
     "shelljs": "^0.8.3",
-    "ssr-server-utils": "^6.2.10",
+    "ssr-common-utils": "^6.2.10",
     "ssr-types": "^6.2.3",
     "yargs": "^13.2.4"
   },

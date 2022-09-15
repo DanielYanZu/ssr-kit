@@ -1,15 +1,13 @@
 import { h, createSSRApp, createApp, reactive, renderSlot } from 'vue'
 import { Store } from 'vuex'
 import { RouteLocationNormalizedLoaded } from 'vue-router'
-import { findRoute, isMicro } from 'ssr-client-utils'
-import { setStore } from 'ssr-common-utils'
+import { findRoute, isMicro, setStore, setPinia, setApp } from 'ssr-common-utils'
 import { createPinia, Pinia } from 'pinia'
 import { createRouter, createStore } from './create'
 import { Routes } from './combine-router'
-import { ESMFetch, IFeRouteItem, RoutesType } from '../types'
+import { ESMFetch, IFeRouteItem } from '../types'
 
-const { FeRoutes, App, layoutFetch } = Routes as RoutesType
-declare const module: any
+const { FeRoutes, App, layoutFetch } = Routes
 
 let hasRender = false
 async function getAsyncCombineData (fetch: ESMFetch | undefined, store: Store<any>, router: RouteLocationNormalizedLoaded, pinia: Pinia) {
@@ -31,6 +29,8 @@ const clientRender = async () => {
   })
   const pinia = createPinia()
   setStore(store)
+  setPinia(pinia)
+
   const create = window.__USE_SSR__ ? createSSRApp : createApp
 
   if (window.__INITIAL_DATA__) {
@@ -61,6 +61,7 @@ const clientRender = async () => {
   app.use(store)
   app.use(router)
   app.use(pinia)
+  setApp(app)
   router.beforeResolve(async (to, from, next) => {
     if (hasRender || !window.__USE_SSR__) {
       // 找到要进入的组件并提前执行 fetch 函数
@@ -81,7 +82,7 @@ const clientRender = async () => {
 
   app.mount('#app', !!window.__USE_SSR__) // judge ssr/csr
   if (!window.__USE_VITE__) {
-    module?.hot?.accept?.() // webpack hmr for vue jsx
+    (module as any)?.hot?.accept?.() // webpack hmr for vue jsx
   }
 }
 

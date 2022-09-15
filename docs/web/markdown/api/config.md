@@ -280,6 +280,8 @@ module.exports = {
 
 是否开启底层 `webpack-dev-server` 的 `https` 模式，需配合 `3000` 端口的 `Node.js` 的 `https` 服务同步使用。设置为 `true` 将使用默认的自签名证书。当此证书无法被信任时，也可以自行传递与 `Node.js` 服务端一致的证书配置。
 
+注：更加推荐本地开发时使用 [whistle](https://wproxy.org/whistle/) 启动 `https` 代理服务
+
 ```js
 const fs = require('fs')
 const isProd = process.env.NODE_ENV === 'production'
@@ -294,7 +296,7 @@ module.exports = {
 
 // server 端如何读取, 以 nest.js 为例
 // main.ts
-import { loadConfig } from 'ssr-server-utils'
+import { loadConfig } from 'ssr-common-utils'
 
 const { https } = loadConfig()
 const app = await NestFactory.create<NestExpressApplication>(AppModule, isProd ? {} : {
@@ -658,6 +660,8 @@ type viteConfig?: () => {
 
 ## htmlTemplate🤔
 
+参考文件 [html](https://github.com/zhangyuang/ssr/blob/dev/packages/cli/src/html.ts)
+
 - 类型: `string`
 - 默认: `
   \<!DOCTYPE html>
@@ -681,7 +685,7 @@ type viteConfig?: () => {
 
 - 生效场景: `Webpack/Vite` 
 
-作为 `ssr build --spa` 的构建模版，开发者可自行设置 `title, meta` 等标签信息，其余模版插入内容请不要修改保持不变。
+作为 `ssr build --html` 的构建模版，开发者可自行设置 `title, meta` 等标签信息，其余模版插入内容请不要修改保持不变。
 ## 注意事项
 
 1. 由于 `config.js` 文件在 Node.js 环境也会被加载，如果直接在顶部 `require` 模块可能会导致模块`体积过大`，降低应用启动速度，我们建议在必要的函数当中再 `require` 需要用到的模块。

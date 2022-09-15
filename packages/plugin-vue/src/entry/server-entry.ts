@@ -1,13 +1,12 @@
 import * as Vue from 'vue'
-import { findRoute, getManifest, logGreen, normalizePath, getAsyncCssChunk, getAsyncJsChunk, getUserScriptVue, remInitial } from 'ssr-server-utils'
+import { findRoute, getManifest, logGreen, normalizePath, getAsyncCssChunk, getAsyncJsChunk, getUserScriptVue, remInitial, setStore } from 'ssr-common-utils'
 import { ISSRContext, IConfig } from 'ssr-types'
 import { serialize } from 'ssr-serialize-javascript'
-import { setStore } from 'ssr-common-utils'
 import { Routes } from './create-router'
 import { createRouter, createStore } from './create'
-import { IFeRouteItem, RoutesType } from '../types'
+import { IFeRouteItem } from '../types'
 
-const { FeRoutes, App, layoutFetch, Layout } = Routes as RoutesType
+const { FeRoutes, App, layoutFetch, Layout } = Routes
 
 const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<Vue.Component> => {
   const { mode, customeHeadScript, customeFooterScript, isDev, parallelFetch, prefix, isVite, clientPrefix } = config
@@ -24,32 +23,24 @@ const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<Vue.Comp
     `)
   }
   const { fetch, webpackChunkName } = routeItem
-  const dynamicCssOrder = await getAsyncCssChunk(ctx, webpackChunkName)
-  const dynamicJsOrder = await getAsyncJsChunk(ctx)
+  const dynamicCssOrder = await getAsyncCssChunk(ctx, webpackChunkName, config)
+  const dynamicJsOrder = await getAsyncJsChunk(ctx, webpackChunkName, config)
   const manifest = await getManifest(config)
 
   const isCsr = !!(mode === 'csr' || ctx.request.query?.csr)
 
-  let layoutFetchData = {}
-  let fetchData = {}
+  let [layoutFetchData, fetchData] = [{}, {}]
 
   if (!isCsr) {
-    const currentFetch = fetch ? (await fetch()).default : null
     router.push(url)
-
-    // csr 下不需要服务端获取数据
-    if (parallelFetch) {
-      [layoutFetchData, fetchData] = await Promise.all([
-        layoutFetch ? layoutFetch({ store, router: router.currentRoute, ctx }, ctx) : Promise.resolve({}),
-        currentFetch ? currentFetch({ store, router: router.currentRoute, ctx }, ctx) : Promise.resolve({})
-      ])
-    } else {
-      layoutFetchData = layoutFetch ? await layoutFetch({ store, router: router.currentRoute, ctx }, ctx) : {}
-      fetchData = currentFetch ? await currentFetch({ store, router: router.currentRoute, ctx }, ctx) : {}
-    }
+    const currentFetch = fetch ? (await fetch()).default : null
+    const lF = layoutFetch ? layoutFetch({ store, router: router.currentRoute, ctx }, ctx) : Promise.resolve({})
+    const CF = currentFetch ? currentFetch({ store, router: router.currentRoute, ctx }, ctx) : Promise.resolve({});
+    [layoutFetchData, fetchData] = parallelFetch ? await Promise.all([lF, CF]) : [await lF, await CF]
   } else {
     logGreen(`Current path ${path} use csr render mode`)
   }
+
   const combineAysncData = Object.assign({}, layoutFetchData ?? {}, fetchData ?? {})
   const state = Object.assign({}, store.state ?? {}, combineAysncData)
   // @ts-expect-error
@@ -73,10 +64,10 @@ const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<Vue.Comp
           type: 'module',
           src: '/node_modules/ssr-plugin-vue/esm/entry/client-entry.js'
         }
-      })] : dynamicJsOrder.map(js => h('script', {
+      })] : dynamicJsOrder.map(js => manifest[js]).filter(Boolean).map(js => h('script', {
         attrs: {
-          src: manifest[js],
-          type: isVite ? 'module' : ''
+          src: js,
+          type: isVite ? 'module' : 'text/javascript'
         }
       }))
 
@@ -84,7 +75,7 @@ const serverRender = async (ctx: ISSRContext, config: IConfig): Promise<Vue.Comp
       const customeFooterScriptArr: Vue.VNode[] = getUserScriptVue(customeFooterScript, ctx, h, 'vue')
       const initialData = isCsr ? h('script', {
         domProps: {
-          innerHTML: `window.__USE_VITE__=${isVite}; window.prefix="${prefix}"`
+          innerHTML: `window.__USE_VITE__=${isVite}; window.prefix="${prefix}";${clientPrefix ? `window.clientPrefix="${clientPrefix}"` : ''}`
         }
       }) : h('script', {
         domProps: {

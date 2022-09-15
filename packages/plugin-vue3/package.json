@@ -1,6 +1,6 @@
 {
   "name": "ssr-plugin-vue3",
-  "version": "6.2.52",
+  "version": "6.2.66",
   "description": "plugin-vue3 for ssr",
   "main": "./cjs/index.js",
   "module": "./esm/index.js",
@@ -25,6 +25,9 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/zhangyuang/ssr/issues"
+  },
+  "engines": {
+    "node": ">=12.17.0"
   },
   "homepage": "https://github.com/zhangyuang/ssr#readme",
   "dependencies": {
@@ -51,24 +54,22 @@
     "mini-css-extract-plugin": "^1.0.0",
     "optimize-css-assets-webpack-plugin": "^6.0.0",
     "ora": "^4.0.4",
-    "pinia": "^2.0.13",
+    "pinia": "^2.0.17",
     "postcss": "^8.0.0",
     "postcss-discard-comments": "^5.0.0",
     "postcss-flexbugs-fixes": "^5.0.0",
     "postcss-loader": "^4.0.0",
     "postcss-preset-env": "7.6.0",
     "postcss-safe-parser": "^6.0.0",
-    "ssr-client-utils": "^6.2.7",
     "ssr-common-utils": "^6.0.0",
     "ssr-deepclone": "^1.0.0",
     "ssr-serialize-javascript": "^6.0.0",
-    "ssr-server-utils": "^6.2.10",
     "ssr-types": "^6.2.3",
-    "ssr-vite-plugin-style-import": "^2.0.0",
+    "ssr-vite-plugin-style-import": "^2.0.1",
     "ssr-webpack": "^6.2.10",
     "terser-webpack-plugin": "^2.3.5",
     "url-loader": "^4.1.1",
-    "vite": "^2.9.13",
+    "vite": "^2.9.15",
     "vue": "^3.0.0",
     "vue-loader": "^17.0.0",
     "vue-router": "^4.0.0",

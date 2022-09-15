@@ -1,7 +1,7 @@
 
 import { promises } from 'fs'
 import { resolve } from 'path'
-import { loadConfig, getCwd, cryptoAsyncChunkName, getOutputPublicPath, loadModuleFromFramework } from 'ssr-server-utils'
+import { loadConfig, getCwd, cryptoAsyncChunkName, getOutputPublicPath, loadModuleFromFramework } from 'ssr-common-utils'
 import * as WebpackChain from 'webpack-chain'
 import { Compiler } from 'webpack'
 import { getBaseConfig } from './base'
@@ -21,14 +21,14 @@ const getClientWebpack = (chain: WebpackChain) => {
   const shouldUseSourceMap = isDev || Boolean(process.env.GENERATE_SOURCEMAP)
   const publicPath = getOutputPublicPath()
   getBaseConfig(chain, false)
-  chain.devtool(isDev ? 'cheap-module-source-map' : (shouldUseSourceMap ? 'source-map' : false))
+  chain.devtool(isDev ? 'eval-source-map' : (shouldUseSourceMap ? 'source-map' : false))
   chain.entry(chunkName)
     .add(require.resolve('../entry/client-entry'))
     .end()
     .output
     .path(getOutput().clientOutPut)
-    .filename(useHash ? 'static/js/[name].[contenthash:8].js' : 'static/js/[name].js')
-    .chunkFilename(useHash ? 'static/js/[name].[contenthash:8].chunk.js' : 'static/js/[name].chunk.js')
+    .filename(useHash ? '[name].[contenthash:8].js' : 'static/[name].js')
+    .chunkFilename(useHash ? '[name].[contenthash:8].chunk.js' : 'static/[name].chunk.js')
     .publicPath(publicPath)
     .end()
 

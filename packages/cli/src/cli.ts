@@ -7,6 +7,7 @@ import { generateHtml } from './html'
 import { cleanOutDir } from './clean'
 import { handleEnv } from './preprocess'
 import { onWatcher, createWatcher } from './watcher'
+
 const spinnerProcess = fork(resolve(__dirname, './spinner')) // 单独创建子进程跑 spinner 否则会被后续的 同步代码 block 导致 loading 暂停
 
 const spinner = {
@@ -19,7 +20,7 @@ const spinner = {
 }
 
 const startOrBuild = async (argv: Argv, type: 'start' | 'build') => {
-  const { copyReactContext, judgeFramework, judgeServerFramework } = await import('ssr-server-utils')
+  const { copyReactContext, judgeFramework, judgeServerFramework } = await import('ssr-common-utils')
   const framework = judgeFramework()
   const serverFramework = judgeServerFramework()
   if (!argv.api) {
@@ -48,7 +49,7 @@ const startFunc = async (argv: Argv) => {
   if (!argv.noclean) {
     await cleanOutDir()
   }
-  const { parseFeRoutes, transformConfig } = await import('ssr-server-utils')
+  const { parseFeRoutes, transformConfig } = await import('ssr-common-utils')
   const watcher = await createWatcher()
   await transformConfig()
   await handleEnv(argv)
@@ -64,7 +65,7 @@ const buildFunc = async (argv: Argv) => {
   if (!argv.noclean) {
     await cleanOutDir()
   }
-  const { parseFeRoutes, transformConfig } = await import('ssr-server-utils')
+  const { parseFeRoutes, transformConfig } = await import('ssr-common-utils')
   await transformConfig()
   await handleEnv(argv)
   await parseFeRoutes()
@@ -74,7 +75,7 @@ const buildFunc = async (argv: Argv) => {
 
 const deployFunc = async (argv: Argv) => {
   process.env.NODE_ENV = 'production'
-  const { judgeServerFramework } = await import('ssr-server-utils')
+  const { judgeServerFramework } = await import('ssr-common-utils')
   const serverFramework = judgeServerFramework()
   const { serverPlugin } = await import(serverFramework)
   const server: IPlugin['serverPlugin'] = serverPlugin()
@@ -108,8 +109,8 @@ yargs
     },
     ...cliDesc
   }), async (argv: Argv) => {
-    const { logInfo, judgeFramework } = await import('ssr-server-utils')
-    if (!argv.vite && judgeFramework() !== 'ssr-plugin-vue') {
+    const { logInfo, judgeFramework } = await import('ssr-common-utils')
+    if (!argv.optimize && !argv.vite && judgeFramework() !== 'ssr-plugin-vue') {
       logInfo(`
       In Webpack mode, you can use ssr start --optimize for get high performance, read http://doc.ssr-fc.com/docs/features$faq#%E9%AB%98%E6%80%A7%E8%83%BD%E4%BA%A7%E7%89%A9%E6%9E%84%E5%BB%BA for more details
       `)
@@ -136,12 +137,12 @@ yargs
     },
     ...cliDesc
   }), async (argv: Argv) => {
-    const { logWarning, judgeFramework, logInfo } = await import('ssr-server-utils')
+    const { logWarning, judgeFramework, logInfo } = await import('ssr-common-utils')
     if (argv.vite) {
       logWarning(`ssr build by vite is beta now, if you find some bugs, please submit an issue on https://github.com/zhangyuang/ssr/issues or you can use ssr build --vite --legacy which will close manualChunks
       to get a stable bundle result but maybe some performance loss
       `)
-    } else if (!argv.vite && judgeFramework() !== 'ssr-plugin-vue') {
+    } else if (!argv.optimize && !argv.vite && judgeFramework() !== 'ssr-plugin-vue') {
       logInfo(`
       In Webpack mode, you can use ssr build --optimize for get high performance bundle read http://doc.ssr-fc.com/docs/features$faq#%E9%AB%98%E6%80%A7%E8%83%BD%E4%BA%A7%E7%89%A9%E6%9E%84%E5%BB%BA for more details
       `)
@@ -154,6 +155,12 @@ yargs
     }
   }), async (argv: Argv) => {
     await deployFunc(argv)
+  })
+  .command('update', 'check dependencies version is latest', {}, async (argv: Argv) => {
+    spinner.start()
+    const { update } = await import ('./update')
+    await update()
+    spinner.stop()
   })
   .demandCommand(1, 'You need at least one command before moving on')
   .option('version', {
